@@ -31,14 +31,32 @@ class WebCrawler:
         self.visited_urls: Set[str] = set()
         self.crawled_data: List[Dict[str, str]] = []
         
+        # Pages to skip (login, signup, cart, etc.)
+        self.skip_patterns = [
+            'login', 'signin', 'sign-in', 'signup', 'sign-up', 'register',
+            'cart', 'checkout', 'payment', 'account', 'profile',
+            'logout', 'signout', 'auth', 'password', 'reset',
+            'admin', 'dashboard', 'settings', 'preferences'
+        ]
+        
     def is_valid_url(self, url: str) -> bool:
         """Check if URL is valid and belongs to the same domain"""
         parsed_base = urlparse(self.base_url)
         parsed_url = urlparse(url)
-        return (
-            parsed_url.scheme in ['http', 'https'] and
-            parsed_url.netloc == parsed_base.netloc
-        )
+        
+        # Check if URL belongs to same domain
+        if not (parsed_url.scheme in ['http', 'https'] and
+                parsed_url.netloc == parsed_base.netloc):
+            return False
+        
+        # Skip URLs with unwanted patterns
+        url_lower = url.lower()
+        for pattern in self.skip_patterns:
+            if pattern in url_lower:
+                logger.debug(f"Skipping URL (matches pattern '{pattern}'): {url}")
+                return False
+        
+        return True
     
     def extract_text(self, soup: BeautifulSoup) -> str:
         """Extract clean text from HTML"""
@@ -57,16 +75,6 @@ class WebCrawler:
         return text
     
     def extract_links(self, soup: BeautifulSoup, current_url: str) -> List[str]:
-        """Extract all valid links from the page"""
-        links = []
-        for link in soup.find_all('a', href=True):
-            url = urljoin(current_url, link['href'])
-            # Remove fragments
-            url = url.split('#')[0]
-            if self.is_valid_url(url) and url not in self.visited_urls:
-                links.append(url)
-        return links
-    
     def crawl_page(self, url: str) -> Dict[str, str]:
         """Crawl a single page and extract content"""
         try:
@@ -82,6 +90,17 @@ class WebCrawler:
             
             # Extract main content
             content = self.extract_text(soup)
+            
+            return {
+                'url': url,
+                'title': title_text,
+                'content': content,
+                'raw_html': response.text  # Store raw HTML
+            }
+            
+        except Exception as e:
+            logger.error(f"Error crawling {url}: {str(e)}")
+            return Noneelf.extract_text(soup)
             
             return {
                 'url': url,
@@ -128,11 +147,21 @@ class WebCrawler:
                                 queue.append((link, depth + 1))
                     except Exception as e:
                         logger.error(f"Error extracting links from {current_url}: {str(e)}")
-            
             # Be respectful - add delay
             time.sleep(0.5)
         
         logger.info(f"Crawling completed. Total pages crawled: {len(self.crawled_data)}")
+        
+        # Print list of crawled URLs for testing
+        logger.info("\n" + "="*60)
+        logger.info("CRAWLED URLS:")
+        logger.info("="*60)
+        for i, page in enumerate(self.crawled_data, 1):
+            logger.info(f"{i}. {page['url']}")
+            logger.info(f"   Title: {page['title']}")
+        logger.info("="*60 + "\n")
+        
+        return self.crawled_dataompleted. Total pages crawled: {len(self.crawled_data)}")
         return self.crawled_data
 
 
