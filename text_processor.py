@@ -5,10 +5,15 @@ Clean and chunk text for embedding generation
 from typing import List, Dict
 import re
 import tiktoken
+import uuid
+import logging
 try:
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class TextProcessor:
@@ -79,36 +84,59 @@ class TextProcessor:
     
     def process_documents(self, documents: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
-        Process multiple documents into chunks
+        Process multiple documents into chunks with overlap
         
         Args:
             documents: List of documents with 'url', 'title', and 'content'
             
         Returns:
-            List of processed chunks with metadata
+            List of processed chunks with complete metadata
         """
         processed_chunks = []
         
-        for doc in documents:
+        logger.info(f"Processing {len(documents)} documents for chunking...")
+        logger.info(f"Chunk size: {self.chunk_size}, Overlap: {self.chunk_overlap}\n")
+        
+        for doc_idx, doc in enumerate(documents, 1):
             # Clean the content
             cleaned_content = self.clean_text(doc['content'])
             
             # Skip if content is too short
             if len(cleaned_content) < 100:
+                logger.debug(f"Skipping document {doc_idx} (too short): {doc['url']}")
                 continue
             
-            # Chunk the content
+            # Chunk the content with overlap
             chunks = self.chunk_text(cleaned_content)
             
-            # Add metadata to each chunk
+            logger.info(f"Page {doc_idx}: {doc['title'][:50]}...")
+            logger.info(f"  URL: {doc['url']}")
+            logger.info(f"  Original content length: {len(doc['content'])} chars")
+            logger.info(f"  Cleaned content length: {len(cleaned_content)} chars")
+            logger.info(f"  ✓ Chunks generated: {len(chunks)}")
+            
+            # Add metadata to each chunk including unique chunk_id
             for i, chunk in enumerate(chunks):
+                chunk_id = str(uuid.uuid4())  # Generate unique chunk ID
                 processed_chunks.append({
-                    'text': chunk,
-                    'url': doc['url'],
-                    'title': doc['title'],
-                    'chunk_index': i,
-                    'total_chunks': len(chunks)
+                    'chunk_id': chunk_id,           # Unique chunk identifier
+                    'text': chunk,                   # Chunk text
+                    'url': doc['url'],               # Parent URL
+                    'title': doc['title'],           # Page title
+                    'chunk_index': i,                # Chunk position
+                    'total_chunks': len(chunks)      # Total chunks from this page
                 })
+                
+                logger.debug(f"    Chunk {i+1}/{len(chunks)}: {len(chunk)} chars, ID: {chunk_id[:8]}...")
+            
+            logger.info("")
+        
+        logger.info("="*70)
+        logger.info(f"✓ CHUNKING COMPLETE")
+        logger.info(f"  Total documents processed: {len(documents)}")
+        logger.info(f"  Total chunks created: {len(processed_chunks)}")
+        logger.info(f"  Average chunks per page: {len(processed_chunks)/len(documents):.1f}")
+        logger.info("="*70 + "\n")
         
         return processed_chunks
     
