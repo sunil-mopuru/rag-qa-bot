@@ -312,29 +312,4 @@ API_PORT=8080
 4. **Rate Limiting**: Add delays in crawler to respect website resources
 5. **Monitoring**: Check vector database count regularly to ensure proper indexing
 
-## 🤝 Contributing
 
-Feel free to submit issues or pull requests to improve the bot!
-
-## 📄 License
-
-This project is provided as-is for educational purposes.
-
-## 🙏 Acknowledgments
-
-- OpenAI for embeddings and LLM APIs
-- ChromaDB for vector storage
-- FastAPI for the web framework
-- BeautifulSoup for web scraping
-
-## 📮 Support
-
-For issues or questions:
-
-1. Check the troubleshooting section
-2. Review the code comments
-3. Test each component independently
-
----
-
-**Built with ❤️ using Retrieval Augmented Generation**
