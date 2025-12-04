@@ -33,7 +33,7 @@ class TextProcessor:
     
     def clean_text(self, text: str) -> str:
         """
-        Clean text by removing excessive whitespace and special characters
+        Clean text by removing excessive whitespace, special characters, and noise
         
         Args:
             text: Raw text to clean
@@ -41,14 +41,26 @@ class TextProcessor:
         Returns:
             Cleaned text
         """
-        # Remove excessive whitespace
+        # Remove HTML entities that might have slipped through
+        text = re.sub(r'&[a-zA-Z]+;', ' ', text)
+        text = re.sub(r'&#\d+;', ' ', text)
+        
+        # Remove URLs
+        text = re.sub(r'http\S+|www\.\S+', '', text)
+        
+        # Remove email addresses
+        text = re.sub(r'\S+@\S+', '', text)
+        
+        # Remove excessive whitespace (multiple spaces, tabs, etc.)
         text = re.sub(r'\s+', ' ', text)
         
         # Remove special characters but keep basic punctuation
-        text = re.sub(r'[^\w\s.,!?;:()\-]', '', text)
+        text = re.sub(r'[^\w\s.,!?;:()\-\'""]', '', text)
         
-        # Remove URLs
-        text = re.sub(r'http\S+|www.\S+', '', text)
+        # Remove lines with only numbers or symbols
+        lines = text.split('\n')
+        cleaned_lines = [line for line in lines if line.strip() and not line.strip().isdigit()]
+        text = '\n'.join(cleaned_lines)
         
         return text.strip()
     

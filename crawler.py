@@ -59,18 +59,35 @@ class WebCrawler:
         return True
     
     def extract_text(self, soup: BeautifulSoup) -> str:
-        """Extract clean text from HTML"""
-        # Remove script and style elements
+        """Extract clean text from HTML - removes navbars, footers, scripts, cookie banners"""
+        # Remove script, style, nav, footer, header elements
         for script in soup(["script", "style", "nav", "footer", "header"]):
             script.decompose()
         
-        # Get text
+        # Remove cookie banners and consent dialogs (common classes/ids)
+        cookie_selectors = [
+            '[class*="cookie"]', '[id*="cookie"]',
+            '[class*="consent"]', '[id*="consent"]',
+            '[class*="banner"]', '[class*="popup"]',
+            '[class*="modal"]', '[class*="overlay"]',
+            '[aria-label*="cookie"]', '[aria-label*="consent"]'
+        ]
+        for selector in cookie_selectors:
+            for element in soup.select(selector):
+                element.decompose()
+        
+        # Remove common noise elements
+        for noise in soup(["aside", "form", "button", "input"]):
+            noise.decompose()
+        
+        # Get visible text only
         text = soup.get_text(separator='\n')
         
-        # Clean up whitespace
+        # Clean up whitespace and remove empty lines
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = '\n'.join(chunk for chunk in chunks if chunk)
+        # Remove empty lines and noise
+        text = '\n'.join(chunk for chunk in chunks if chunk and len(chunk) > 3)
         
         return text
     
@@ -88,8 +105,15 @@ class WebCrawler:
             title = soup.find('title')
             title_text = title.get_text().strip() if title else url
             
-            # Extract main content
+            # Extract and clean content
             content = self.extract_text(soup)
+            
+            # Log cleaned text sample for testing (first 300 chars)
+            logger.debug(f"\n--- Cleaned Text Sample for: {url} ---")
+            logger.debug(f"Title: {title_text}")
+            logger.debug(f"Content Length: {len(content)} characters")
+            logger.debug(f"First 300 chars: {content[:300]}...")
+            logger.debug(f"--- End Sample ---\n")
             
             return {
                 'url': url,
