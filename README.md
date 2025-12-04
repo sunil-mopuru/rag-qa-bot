@@ -312,4 +312,6 @@ API_PORT=8080
 4. **Rate Limiting**: Add delays in crawler to respect website resources
 5. **Monitoring**: Check vector database count regularly to ensure proper indexing
 
+***** END *****
+
 
